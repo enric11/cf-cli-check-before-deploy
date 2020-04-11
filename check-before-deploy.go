@@ -59,9 +59,9 @@ func (pluginDemo *PluginParams) Run(cliConnection plugin.CliConnection, args []s
 	// GetService(serviceInstance string) (plugin_models.GetService_Model, error)
 	
 	pluginFlag := flag.NewFlagSet("check-before-deploy", flag.ExitOnError)
-	file := pluginFlag.String("file", "f", "--check-binding path/to/some/file.yalm")
-	checkbinding := pluginFlag.Bool("check-binding", false, "Check in YALM if existing services are created in org/space")
-	checkservice := pluginFlag.Bool("check-service", false, "Check in YALM if existing services plant exist in org/space")
+	file := pluginFlag.String("file", "f", "--file path/to/some/file.yalm")
+	checkbinding := pluginFlag.Bool("check-binding", false, "Check the YALM file if the binded services exist in org / space")
+	checkservice := pluginFlag.Bool("check-service", false, "Check the YALM file if exist services plant exist in org/space")
 	allChecks := pluginFlag.Bool("all", false, "Active all validations")
 
 
@@ -84,6 +84,8 @@ func (pluginDemo *PluginParams) Run(cliConnection plugin.CliConnection, args []s
 			pluginDemo.yalmData.CheckResourceListPlans(cliConnection)
 		}
 		//fmt.Printf("Value: %#v\n", pluginDemo.yalmData.Resources)
+		fmt.Println("")
+		fmt.Println("")
 	}
 
 	
@@ -97,13 +99,15 @@ func (pluginDemo *PluginParams) ReadFile(file string) {
     yamlFile, err := ioutil.ReadFile(filename)
 	
 	if err != nil {
-        panic(err)
+		fmt.Printf(ErrorColor,err)
+		os.Exit(1)
     }
 	
 	// parse file
 	err = yaml.Unmarshal(yamlFile, &pluginDemo.yalmData)
     if err != nil {
-        panic(err)
+		fmt.Printf(ErrorColor,err)
+		os.Exit(1)
     }
 	
 }
@@ -231,13 +235,13 @@ func (pluginDemo *PluginParams) GetMetadata() plugin.PluginMetadata {
 			{
 				Name:     "check-before-deploy",
 				Alias:    "cbd",
-				HelpText: "Checking Yalm services before deploy",
+				HelpText: "Check the Yalm file and services before deploying your MTA",
 				UsageDetails: plugin.Usage{
 					Usage: "cf check-before-deploy -file [path] -check-binding -check-service -all",
 					Options: map[string]string{
 						"file": "obligatory - Path with YALM file",
-						"check-binding": "Check in YALM if existing services are created in org/space ",
-						"check-service": "Check in YALM if existing services plant exist in org/space",
+						"check-binding": "Check the YALM file if the binded services exist in org / space",
+						"check-service": "Check the YALM file if exist services plant exist in org/space",
 						"all": "Active all validations",
 					},
 				},
