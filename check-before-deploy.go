@@ -227,9 +227,9 @@ func (pluginDemo *PluginParams) GetMetadata() plugin.PluginMetadata {
 	return plugin.PluginMetadata{
 		Name: "check-before-deploy",
 		Version: plugin.VersionType{
-			Major: 0,
-			Minor: 1,
-			Build: 6,
+			Major: 1,
+			Minor: 0,
+			Build: 0,
 		},
 		Commands: []plugin.Command{
 			{
