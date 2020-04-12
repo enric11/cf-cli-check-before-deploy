@@ -31,7 +31,7 @@ Run the tests as follows to check all commands (Actually 2):
 $ cd cf-cli-check-before-deploy
 $ cf check-before-deploy -file mta.yalm -all
 ```
-![Image of execution](https://github.com/enric11/cf-cli-check-before-deploy/images/execution.png)
+![Image of execution](https://raw.githubusercontent.com/enric11/cf-cli-check-before-deploy/master/images/execution.png)
 
 ## Results
 
