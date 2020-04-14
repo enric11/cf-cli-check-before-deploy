@@ -1,7 +1,7 @@
 # PCF CLI Plugin Check Before Deploy
 Check Before Deploy for PCF CLI Plugin
 
-This repository provides a [Cloud Foundry CLI](https://github.com/cloudfoundry/cli) plugin for check the Yalm file before launch deploy instructions.
+This repository provides a [Cloud Foundry CLI](https://github.com/cloudfoundry/cli) plugin for check the YAML file before launch deploy instructions.
 
 ## Building
 You need to install GO.
@@ -29,7 +29,7 @@ $ cf uninstall-plugin check-before-deploy
 Run the tests as follows to check all commands (Actually 2):
 ```bash
 $ cd cf-cli-check-before-deploy
-$ cf check-before-deploy -file mta.yalm -all
+$ cf check-before-deploy -file mta.yaml -all
 ```
 ![Image of execution](https://raw.githubusercontent.com/enric11/cf-cli-check-before-deploy/master/images/execution.png)
 
