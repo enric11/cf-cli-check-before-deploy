@@ -31,14 +31,15 @@ Run the tests as follows to check all commands (Actually 2):
 $ cd cf-cli-check-before-deploy
 $ cf check-before-deploy -file mta.yaml -all
 ```
-![Image of execution](https://raw.githubusercontent.com/enric11/cf-cli-check-before-deploy/master/images/execution.png)
 
 ## Results
+![Image of execution](https://raw.githubusercontent.com/enric11/cf-cli-check-before-deploy/master/images/execution.png)
+
 
 
 ## License
 
-The Spring Cloud Dataflow for PCF CLI plugin is Open Source software released under the
+The Check Before Deploy plugin for PCF CLI plugin is Open Source software released under the
 [Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0.html).
 
 
