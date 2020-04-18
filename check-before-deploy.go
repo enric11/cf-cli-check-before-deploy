@@ -56,7 +56,6 @@ func main() {
 
 func (pluginDemo *PluginParams) Run(cliConnection plugin.CliConnection, args []string) {
 	// Initialize flags
-
 	// GetService(serviceInstance string) (plugin_models.GetService_Model, error)
 	
 	pluginFlag := flag.NewFlagSet("check-before-deploy", flag.ExitOnError)
@@ -112,9 +111,8 @@ func (pluginDemo *PluginParams)ExampleReader(file string) {
 		//fmt.Printf("Contents of %s:\n", f.Name)
 			if f.Name == "META-INF/mtad.yaml" {
 				rc, err := f.Open()
-
-				if err != nil {
-					fmt.Println(err)
+				if rc == nil {
+					//fmt.Println(err)
 				}
 
 				b1 := make([]byte,100000000)
@@ -124,7 +122,7 @@ func (pluginDemo *PluginParams)ExampleReader(file string) {
 				rc.Close()
 				err = yaml.Unmarshal(b2, &pluginDemo.YAMLData)
 				if err != nil {
-					fmt.Printf(err)
+					fmt.Printf(ErrorColor,err)
 					os.Exit(1)
 				}
 			}
@@ -155,6 +153,7 @@ func (pluginDemo *PluginParams) ReadFile(file string) {
     }
 	
 }
+
 
 // Check bindings
 func (YAMLParsed YAMLData) CheckResourceListPlans(cliConnection plugin.CliConnection) {
