@@ -8,8 +8,8 @@ import (
 	"io/ioutil"
     "path/filepath"
 	"gopkg.in/yaml.v3"
-//	"code.cloudfoundry.org/cli/plugin/models"
 	"code.cloudfoundry.org/cli/plugin"
+	"archive/zip"
 )
 
 const (
@@ -25,7 +25,7 @@ const c_TypeExisting = "org.cloudfoundry.existing-service"
 const c_TypeManaged = "org.cloudfoundry.managed-service"
 const c_CostPaid = "paid"
 
-type YalmData struct {
+type YAMLData struct {
     ID string `yaml:"ID"`
 	Resources []struct{
 		Name       string `yaml:"name"`
@@ -46,7 +46,13 @@ type BindingResults []struct {
 
 type PluginParams struct {
 	file *bool
-	yalmData YalmData
+	YAMLData YAMLData
+}
+
+var resultsChecks struct {
+	errorBindings bool
+	errorServices bool
+	errorServicesPlan bool
 }
 
 func main() {
@@ -55,43 +61,81 @@ func main() {
 
 func (pluginDemo *PluginParams) Run(cliConnection plugin.CliConnection, args []string) {
 	// Initialize flags
-
-	// GetService(serviceInstance string) (plugin_models.GetService_Model, error)
-	
 	pluginFlag := flag.NewFlagSet("check-before-deploy", flag.ExitOnError)
-	file := pluginFlag.String("file", "f", "--file path/to/some/file.yalm")
-	checkbinding := pluginFlag.Bool("check-binding", false, "Check the YALM file if the binded services exist in org / space")
-	checkservice := pluginFlag.Bool("check-service", false, "Check the YALM file if exist services plant exist in org/space")
+	file := pluginFlag.String("file", "f", "-file path/to/some/file.YAML")
+	mta := pluginFlag.String("mta", "m", "-mta path/to/some/mta_file.mtar")
+	checkbinding := pluginFlag.Bool("check-binding", false, "-check-binding > Check the YAML file if the binded services exist in org / space")
+	checkservice := pluginFlag.Bool("check-service", false, "-check-service > Check the YAML file if exist services plant exist in org / space")
 	allChecks := pluginFlag.Bool("all", false, "Active all validations")
-
 
 	// Parse starting from [1] because the [0]th element is the
 	// Check parameter file
 	err := pluginFlag.Parse(args[1:])
-	if err != nil || file == nil || *file == "" || *file == "f" {
-		fmt.Println("Error parameter file obligatory - please use -file /your_path/file.yalm")
+	
+	// Control to check errors when unisntall plugin in local
+	if(args[0] == "CLI-MESSAGE-UNINSTALL"){
+		os.Exit(0)
+	}
+
+	//check yaml file
+	if *mta == "m" && *file != "f"   {
+		//Read simple file
+		pluginDemo.ReadFile(*file)
+	}else if *file == "f" && *mta != "m"{
+		//Read check mta file
+		pluginDemo.UnzipMTA(*mta)	
+	}else{
+		fmt.Println("Parameter missing, please use: '-file /your_path/file' or '-mta /your_path/file'",err)
 		os.Exit(1)
 	}
 	
-	if file != nil {
-		//Get and parse file
-		pluginDemo.ReadFile(*file)
-		//check binding
-		if *checkbinding || *allChecks {
-			pluginDemo.yalmData.CheckResourceListBinding(cliConnection)
-		}
-		if *checkservice || *allChecks {
-			pluginDemo.yalmData.CheckResourceListPlans(cliConnection)
-		}
-		//fmt.Printf("Value: %#v\n", pluginDemo.yalmData.Resources)
-		fmt.Println("")
-		fmt.Println("")
+	//check binding
+	if *checkbinding || *allChecks {
+		pluginDemo.YAMLData.CheckResourceListBinding(cliConnection)
+	}
+	if *checkservice || *allChecks {
+		pluginDemo.YAMLData.CheckResourceListPlans(cliConnection)
 	}
 
-	
+	if resultsChecks.errorBindings == true || resultsChecks.errorServices == true || resultsChecks.errorServicesPlan == true {
+		fmt.Println("")
+		fmt.Println("")
+		fmt.Printf(ErrorColor,"Some errors have been detected, please fix them before deploy")
+		fmt.Println("")
+		os.Exit(1)
+	}
 }
 
-// Read Yalm file
+// -----------------------------------------------------------------------------------------
+func (pluginDemo *PluginParams)UnzipMTA(file string) {
+
+	// Open a zip archive for reading.
+	r, err := zip.OpenReader(file)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer r.Close()
+
+	// Iterate through the files in the archive,
+	for _, f := range r.File {
+			if f.Name == "META-INF/mtad.yaml" {
+				rc, err := f.Open()
+				if rc == nil {
+					fmt.Println(err)
+				}
+
+				b1 := make([]byte,100000000)
+				n1, err := rc.Read(b1)
+				
+				b2 := b1[:n1]
+				rc.Close()
+				pluginDemo.ParseYAMLFile(b2)
+			}
+	}
+}
+//--------------------------------------------------------------------------------------------
+
+// Read YAML file
 func (pluginDemo *PluginParams) ReadFile(file string) {
 
 	// get file
@@ -101,24 +145,29 @@ func (pluginDemo *PluginParams) ReadFile(file string) {
 	if err != nil {
 		fmt.Printf(ErrorColor,err)
 		os.Exit(1)
-    }
+	}
 	
 	// parse file
-	err = yaml.Unmarshal(yamlFile, &pluginDemo.yalmData)
-    if err != nil {
-		fmt.Printf(ErrorColor,err)
-		os.Exit(1)
-    }
-	
+	pluginDemo.ParseYAMLFile(yamlFile)		
+}
+
+
+func (pluginDemo *PluginParams) ParseYAMLFile(yamlFile []byte) {
+		// parse file
+		err := yaml.Unmarshal(yamlFile, &pluginDemo.YAMLData)
+		if err != nil {
+			fmt.Printf(ErrorColor,err)
+			os.Exit(1)
+		}
 }
 
 // Check bindings
-func (yalmParsed YalmData) CheckResourceListPlans(cliConnection plugin.CliConnection) {
+func (YAMLParsed YAMLData) CheckResourceListPlans(cliConnection plugin.CliConnection) {
 
-	//var services plugin_models.GetService_Model
-	//var errorCliCommand error
-	var errorServices bool 
 	var errorServicesPlan bool 
+
+	resultsChecks.errorServices = false
+	resultsChecks.errorServicesPlan = false
 
 	fmt.Println("")
 	fmt.Printf(InfoColor, "  Check plans")
@@ -126,72 +175,53 @@ func (yalmParsed YalmData) CheckResourceListPlans(cliConnection plugin.CliConnec
 	fmt.Printf(InfoColor, "-------------------------------------------------------------")
 	fmt.Println("")
 
-    for _, resource := range yalmParsed.Resources {
-		//Check only 
+    for _, resource := range YAMLParsed.Resources {
 		if resource.Type ==  c_TypeManaged{
 			command_result, errorCliCommand := cliConnection.CliCommandWithoutTerminalOutput("marketplace", "-s", resource.Parameters.Service)
 			if errorCliCommand == nil {
 				errorServicesPlan = true
+				// Parse marketplace services
 				for i := 4; i < len(command_result); i++ {
-					//fmt.Println(command_result[i])
 					words := strings.Fields(command_result[i])
 					if resource.Parameters.ServicePlan == words[0]{
 						fmt.Printf(OkColor,resource.Name)
 						if words[len(words)-1] == c_CostPaid{
 							fmt.Printf(WarningColor," - [Paid]")
+							fmt.Printf(" " + resource.Parameters.ServicePlan)
 						}
 						fmt.Println("")
 						errorServicesPlan = false
 						break
-						//fmt.Println(words[0], words[len(words)-1])
 					}
 				}
 				if errorServicesPlan{
 					fmt.Printf(ErrorColor,resource.Name)
 					fmt.Printf(" - ")
 					fmt.Printf(resource.Parameters.ServicePlan)
-					fmt.Printf(" service plan does not exist");
+					fmt.Printf(" [service plan does not exist]");
 					fmt.Println("")
+					resultsChecks.errorServicesPlan = true
 				}
 			}else{
 				fmt.Printf(ErrorColor,resource.Name )
 				fmt.Printf(" - ")
 				fmt.Printf(resource.Parameters.Service)
-				fmt.Printf(" service does not exist")
+				fmt.Printf(" [service does not exist]")
 				fmt.Println("")
-				errorServices = true
+				resultsChecks.errorServices = true
 			}
 
 		}
 	}
-	
-	if  errorServices == false {
-		fmt.Println(" > Services correct")
-	}
-
 }
 
 // Check bindings
-func (yalmParsed YalmData) CheckResourceListBinding(cliConnection plugin.CliConnection) {
-
-	/*
-	fmt.Printf(InfoColor, "Info")
-	fmt.Println("")
-	fmt.Printf(NoticeColor, "Notice")
-	fmt.Println("")
-	fmt.Printf(WarningColor, "Warning")
-	fmt.Println("")
-	fmt.Printf(ErrorColor, "Error")
-	fmt.Println("")
-	fmt.Printf(DebugColor, "Debug")
-	fmt.Println("")
-	fmt.Printf(OkColor, "OkColor")
-	fmt.Println("")
-	*/
+func (YAMLParsed YAMLData) CheckResourceListBinding(cliConnection plugin.CliConnection) {
 
 	//var services plugin_models.GetService_Model
 	var errorCliCommand error
-	var errorBinding bool 
+
+	resultsChecks.errorBindings = false
 
 	fmt.Println("")
 	fmt.Printf(InfoColor, "  Check binding")
@@ -199,28 +229,23 @@ func (yalmParsed YalmData) CheckResourceListBinding(cliConnection plugin.CliConn
 	fmt.Printf(InfoColor, "-------------------------------------------------------------")
 	fmt.Println("")
 
-    for _, resource := range yalmParsed.Resources {
-		//Check only 
+	//Check servies
+    for _, resource := range YAMLParsed.Resources {
 		if resource.Type ==  c_TypeExisting{
-			//services,errorCliCommand = cliConnection.GetService(resource.Name)
 			_,errorCliCommand = cliConnection.GetService(resource.Name)
 			if errorCliCommand != nil {
-				errorBinding = true
 				fmt.Printf(ErrorColor,resource.Name)
-				fmt.Printf(" [ service does not exist in your Org/Space] ")
+				fmt.Printf(" [service does not exist in your Org/Space] ")
 				fmt.Println("")
+				resultsChecks.errorBindings = true
+
 			}else{
 				fmt.Printf(OkColor,resource.Name)
 				fmt.Println("")
 			}
-			//fmt.Println(resource.Name)
 		}
 	}
 	
-	if  errorBinding == false {
-		fmt.Println(" > Bindings correct")
-	}
-
 }
 
 func (pluginDemo *PluginParams) GetMetadata() plugin.PluginMetadata {
@@ -228,20 +253,21 @@ func (pluginDemo *PluginParams) GetMetadata() plugin.PluginMetadata {
 		Name: "check-before-deploy",
 		Version: plugin.VersionType{
 			Major: 1,
-			Minor: 0,
+			Minor: 1,
 			Build: 0,
 		},
 		Commands: []plugin.Command{
 			{
 				Name:     "check-before-deploy",
 				Alias:    "cbd",
-				HelpText: "Check the Yalm file and services before deploying your MTA",
+				HelpText: "Check the YAML file and services before deploying your MTA",
 				UsageDetails: plugin.Usage{
-					Usage: "cf check-before-deploy -file [path] -check-binding -check-service -all",
+					Usage: "cf check-before-deploy -file [path] or -mta [path] -check-binding -check-service -all",
 					Options: map[string]string{
-						"file": "obligatory - Path with YALM file",
-						"check-binding": "Check the YALM file if the binded services exist in org / space",
-						"check-service": "Check the YALM file if exist services plant exist in org/space",
+						"file": "Path with YAML file",
+						"mta": "Path with MTA file - The 'META-INF/mtad.yaml' file must exist in the MTA",
+						"check-binding": "Check the YAML file if the binded services exist in org / space",
+						"check-service": "Check the YAML file if exist services plant exist in org / space",
 						"all": "Active all validations",
 					},
 				},
