@@ -8,7 +8,7 @@ You need to install GO.
 
 The specific libraries used in this project are ready in the "vendor" folder.
 
-After install external libraries, it's possible ejecute on windows "compile.bat" to generate plugin in different platforms (osx,windows,linux)
+After install external libraries, it's possible ejecute on windows "compile.bat" to generate plugin in different platforms (osx,windows,linux).
 
 ## Installing
 
