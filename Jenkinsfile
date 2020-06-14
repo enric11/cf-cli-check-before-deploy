@@ -3,7 +3,10 @@ pipeline {
   stages {
     stage('Build') {
       steps {
-        sh 'echo "hello"'
+        sh '''echo "hello"
+. ~/.nvm/nvm.sh
+npm -v
+mbt -v'''
       }
     }
 
