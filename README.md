@@ -3,18 +3,11 @@ Check Before Deploy for PCF CLI Plugin
 
 This repository provides a [Cloud Foundry CLI](https://github.com/cloudfoundry/cli) plugin for check the YAML file before launch deploy instructions.
 
-## Building
-You need to install GO.
-
-The specific libraries used in this project are ready in the "vendor" folder.
-
-After install external libraries, it's possible ejecute on windows "compile.bat" to generate plugin in different platforms (osx,windows,linux).
-
 ## Installing
 
-To install the plugin in the `cf` CLI, first build it and then issue:
+To install the current released version of the plugin in the `cf` CLI just run:
 ```bash
-$ cf install-plugin -f <Your_OS>/check-before-deploy<Your_OS>
+$ cf install-plugin -r CF-Community "check-before-deploy"
 
 ```
 
@@ -23,6 +16,19 @@ The plugin's commands may then be listed by issuing `cf help`.
 To update the plugin, uninstall it as follows and then re-install the plugin as above:
 ```bash
 $ cf uninstall-plugin check-before-deploy
+```
+
+## Building
+You need to install GO.
+
+The specific libraries used in this project are ready in the "vendor" folder.
+
+After install external libraries, it's possible ejecute on windows "compile.bat" to generate plugin in different platforms (osx,windows,linux).
+
+To install the built version use:
+```bash
+$ cf install-plugin -f <Your_OS>/check-before-deploy<Your_OS>
+
 ```
 
 ## Testing
