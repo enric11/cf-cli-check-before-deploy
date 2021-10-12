@@ -60,6 +60,7 @@ func main() {
 }
 
 func (pluginDemo *PluginParams) Run(cliConnection plugin.CliConnection, args []string) {
+
 	// Initialize flags
 	pluginFlag := flag.NewFlagSet("check-before-deploy", flag.ExitOnError)
 	file := pluginFlag.String("file", "f", "-file path/to/some/file.YAML")
@@ -89,12 +90,27 @@ func (pluginDemo *PluginParams) Run(cliConnection plugin.CliConnection, args []s
 		os.Exit(1)
 	}
 	
+	// Check if token is ready
+	_, errorCliCommand := cliConnection.CliCommandWithoutTerminalOutput("oauth-token")
+	
 	//check binding
 	if *checkbinding || *allChecks {
-		pluginDemo.YAMLData.CheckResourceListBinding(cliConnection)
+		//Check login
+		if errorCliCommand != nil {
+			fmt.Println( "This plugin requires that the client to be logged into the CF platform, please use the command 'cf login'" )
+			os.Exit(1)
+		}else{
+			pluginDemo.YAMLData.CheckResourceListBinding(cliConnection)
+		}
 	}
 	if *checkservice || *allChecks {
-		pluginDemo.YAMLData.CheckResourceListPlans(cliConnection)
+		//Check login
+		if errorCliCommand != nil {
+			fmt.Println( "This plugin requires that the client to be logged into the CF platform, please use the command 'cf login'" )
+			os.Exit(1)
+		}else{
+			pluginDemo.YAMLData.CheckResourceListPlans(cliConnection)
+		}
 	}
 
 	if resultsChecks.errorBindings == true || resultsChecks.errorServices == true || resultsChecks.errorServicesPlan == true {
@@ -253,7 +269,7 @@ func (pluginDemo *PluginParams) GetMetadata() plugin.PluginMetadata {
 		Name: "check-before-deploy",
 		Version: plugin.VersionType{
 			Major: 1,
-			Minor: 1,
+			Minor: 2,
 			Build: 0,
 		},
 		Commands: []plugin.Command{
